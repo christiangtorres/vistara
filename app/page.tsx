@@ -51,12 +51,15 @@ export default function Home() {
   );
 }
 
+type DraftContact = Extracted & { notes: string; state: string };
+
 function ScanTab() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [status, setStatus] = useState('');
   const [statusErr, setStatusErr] = useState(false);
   const [photoPath, setPhotoPath] = useState('');
-  const [form, setForm] = useState<Extracted & { notes: string } | null>(null);
+  const [draft, setDraft] = useState<DraftContact | null>(null);
+  const [step, setStep] = useState<null | 'email' | 'notes'>(null);
   const [saving, setSaving] = useState(false);
 
   async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
@@ -64,12 +67,10 @@ function ScanTab() {
     if (!file) return;
     setPreviewUrl(URL.createObjectURL(file));
     setStatus('Compressing photo…'); setStatusErr(false);
-    setForm(null);
+    setDraft(null); setStep(null);
 
     let upload: Blob = file;
-    try {
-      upload = await compressImage(file, 1600, 0.85);
-    } catch { /* fall back to original */ }
+    try { upload = await compressImage(file, 1600, 0.85); } catch {}
 
     setStatus('Reading badge with AI…');
     const fd = new FormData();
@@ -79,33 +80,29 @@ function ScanTab() {
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'scan failed');
       const x: Extracted = data.extracted || {};
-      if (x.error) { setStatus('AI extract failed: ' + x.error + '. Fill in manually.'); setStatusErr(true); }
-      else setStatus('Got it. Review and add your notes.');
       setPhotoPath(data.photo_path);
-      setForm({ name: x.name || '', company: x.company || '', email: x.email || '', state: x.state || '', company_guess: x.company_guess || '', notes: '' });
+      const d: DraftContact = { name: x.name || '', company: x.company || '', email: x.email || '', state: '', company_guess: x.company_guess || '', notes: '' };
+      setDraft(d);
+      if (x.error) { setStatus('AI extract failed — enter details manually.'); setStatusErr(true); }
+      else setStatus(`${x.name || ''}${x.company ? ' · ' + x.company : ''}`.trim() || 'Badge scanned.');
+      setStep('email');
     } catch (err: any) {
       setStatus(err.message); setStatusErr(true);
-      setForm({ name: '', company: '', email: '', state: '', company_guess: '', notes: '' });
     }
   }
 
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form) return;
+  async function save(final: DraftContact) {
     setSaving(true);
     const r = await fetch('/api/contacts', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ...form, photo_path: photoPath }),
+      body: JSON.stringify({ ...final, photo_path: photoPath }),
     });
     setSaving(false);
     if (!r.ok) { const d = await r.json(); setStatus(d.error || 'save failed'); setStatusErr(true); return; }
     setStatus('Saved ✓'); setStatusErr(false);
-    setForm(null); setPreviewUrl(null); setPhotoPath('');
+    setDraft(null); setPreviewUrl(null); setPhotoPath(''); setStep(null);
   }
-
-  const upd = (k: keyof (Extracted & { notes: string })) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setForm(f => f ? { ...f, [k]: e.target.value } : f);
 
   return (
     <>
@@ -116,22 +113,47 @@ function ScanTab() {
       {previewUrl && <img className="preview" src={previewUrl} alt="" />}
       {status && <div className={'status' + (statusErr ? ' err' : '')}>{status}</div>}
 
-      {form && (
-        <form onSubmit={save}>
-          <label>Name<input value={form.name} onChange={upd('name')} /></label>
-          <label>Company<input value={form.company} onChange={upd('company')} /></label>
-          <label>Email<input type="email" value={form.email} onChange={upd('email')} /></label>
-          <label>State (optional)<input value={form.state} onChange={upd('state')} /></label>
-          <label>What this company does (AI guess — edit as needed)
-            <textarea rows={3} value={form.company_guess} onChange={upd('company_guess')} />
+      {draft && step === 'email' && (
+        <Modal title="Confirm email" subtitle={draft.name ? `For ${draft.name}${draft.company ? ` · ${draft.company}` : ''}` : undefined}>
+          <label>Email
+            <input type="email" autoFocus value={draft.email} onChange={e => setDraft({ ...draft, email: e.target.value })} placeholder="name@company.com" />
           </label>
-          <label>Your notes
-            <textarea rows={5} placeholder="Why this is interesting, follow-up needed, where you met, etc." value={form.notes} onChange={upd('notes')} />
+          <label>State (optional)
+            <input value={draft.state} onChange={e => setDraft({ ...draft, state: e.target.value })} placeholder="e.g. CA" />
           </label>
-          <button className="primary" disabled={saving}>{saving ? 'Saving…' : 'Save contact'}</button>
-        </form>
+          <button className="primary" onClick={() => setStep('notes')}>Next</button>
+        </Modal>
+      )}
+
+      {draft && step === 'notes' && (
+        <Modal title="Your notes" subtitle="What do you want to remember about this person?">
+          <label>Notes
+            <textarea autoFocus rows={6} value={draft.notes} onChange={e => setDraft({ ...draft, notes: e.target.value })} placeholder="Why this is interesting, follow-up needed, where you met, etc." />
+          </label>
+          {draft.company_guess && (
+            <div style={{ color: '#9aa0ad', fontSize: 12, fontStyle: 'italic', margin: '6px 0 0' }}>
+              AI guess about the company: {draft.company_guess}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+            <button type="button" className="btn-secondary" onClick={() => setStep('email')}>Back</button>
+            <button className="primary" style={{ marginTop: 0, flex: 1 }} disabled={saving} onClick={() => save(draft)}>{saving ? 'Saving…' : 'Save contact'}</button>
+          </div>
+        </Modal>
       )}
     </>
+  );
+}
+
+function Modal({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 50 }}>
+      <div className="card" style={{ maxWidth: 420 }}>
+        <h2 style={{ margin: 0 }}>{title}</h2>
+        {subtitle && <p className="sub" style={{ margin: '4px 0 12px', color: '#9aa0ad' }}>{subtitle}</p>}
+        {children}
+      </div>
+    </div>
   );
 }
 
