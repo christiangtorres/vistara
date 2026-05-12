@@ -8,7 +8,7 @@ type Contact = {
   company_guess: string; notes: string; owner: string; photo_path: string;
 };
 
-export default function ContactView({ contact, photoUrl }: { contact: Contact; photoUrl: string | null }) {
+export default function ContactView({ contact, photoUrl, audioUrl }: { contact: Contact; photoUrl: string | null; audioUrl?: string | null }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -46,6 +46,12 @@ export default function ContactView({ contact, photoUrl }: { contact: Contact; p
         <h2 style={{ margin: '0 0 4px' }}>{form.name || '(no name)'}</h2>
         <div style={{ color: '#8ab4ff', fontSize: 16, marginBottom: 14 }}>{form.company}</div>
         {photoUrl && <img className="preview" src={photoUrl} alt="badge" style={{ marginBottom: 18 }} />}
+        {audioUrl && (
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ color: '#9aa0ad', fontSize: 13, marginBottom: 6 }}>Voice note</div>
+            <audio controls src={audioUrl} style={{ width: '100%' }} />
+          </div>
+        )}
         <div className="contact" style={{ marginBottom: 14 }}>
           <Field label="Email" value={form.email} />
           <Field label="State" value={form.state} />

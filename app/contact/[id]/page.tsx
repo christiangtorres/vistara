@@ -15,6 +15,11 @@ export default async function ContactPage({ params }: { params: { id: string } }
     const signed = await sb.storage.from('badges').createSignedUrl(c.photo_path, 60 * 10);
     photoUrl = signed.data?.signedUrl ?? null;
   }
+  let audioUrl: string | null = null;
+  if (c.audio_path) {
+    const signed = await sb.storage.from('badges').createSignedUrl(c.audio_path, 60 * 10);
+    audioUrl = signed.data?.signedUrl ?? null;
+  }
 
   return (
     <>
@@ -23,7 +28,7 @@ export default async function ContactPage({ params }: { params: { id: string } }
         <div className="who"><Link href="/">← Back to contacts</Link></div>
       </header>
       <div className="pane">
-        <ContactView contact={c} photoUrl={photoUrl} />
+        <ContactView contact={c} photoUrl={photoUrl} audioUrl={audioUrl} />
       </div>
     </>
   );

@@ -6,7 +6,11 @@ function useSpeech() {
   const [transcript, setTranscript] = useState('');
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const recRef = useRef<any>(null);
+  const mediaRecRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
   const finalRef = useRef('');
 
   useEffect(() => {
@@ -14,34 +18,62 @@ function useSpeech() {
     if (!SR) setSupported(false);
   }, []);
 
-  function start() {
+  async function start() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) { setSupported(false); return false; }
+    if (!SR) setSupported(false);
+
     try {
-      const rec = new SR();
-      rec.continuous = true;
-      rec.interimResults = true;
-      rec.lang = 'en-US';
-      rec.onresult = (e: any) => {
-        let interim = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          const t = e.results[i][0].transcript;
-          if (e.results[i].isFinal) finalRef.current += t + ' ';
-          else interim += t;
-        }
-        setTranscript((finalRef.current + interim).trim());
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      chunksRef.current = [];
+      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
+      const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      mr.ondataavailable = e => { if (e.data.size) chunksRef.current.push(e.data); };
+      mr.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: mr.mimeType || 'audio/webm' });
+        setAudioBlob(blob);
+        streamRef.current?.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
       };
-      rec.onend = () => setListening(false);
-      rec.onerror = () => setListening(false);
-      rec.start();
-      recRef.current = rec;
-      setListening(true);
-      return true;
-    } catch { setListening(false); return false; }
+      mr.start();
+      mediaRecRef.current = mr;
+    } catch (e) {
+      // mic denied or unsupported — continue with just speech recognition if available
+    }
+
+    if (SR) {
+      try {
+        const rec = new SR();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.lang = 'en-US';
+        rec.onresult = (e: any) => {
+          let interim = '';
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            const t = e.results[i][0].transcript;
+            if (e.results[i].isFinal) finalRef.current += t + ' ';
+            else interim += t;
+          }
+          setTranscript((finalRef.current + interim).trim());
+        };
+        rec.onend = () => { /* keep listening flag tied to MediaRecorder */ };
+        rec.onerror = () => {};
+        rec.start();
+        recRef.current = rec;
+      } catch {}
+    }
+
+    setListening(true);
+    return true;
   }
-  function stop() { try { recRef.current?.stop(); } catch {} setListening(false); }
-  function reset() { finalRef.current = ''; setTranscript(''); }
-  return { transcript, listening, supported, start, stop, reset };
+  function stop() {
+    try { recRef.current?.stop(); } catch {}
+    try { mediaRecRef.current?.stop(); } catch {}
+    setListening(false);
+  }
+  function reset() { finalRef.current = ''; setTranscript(''); setAudioBlob(null); chunksRef.current = []; }
+  return { transcript, listening, supported, audioBlob, start, stop, reset };
 }
 
 async function compressImage(file: File, maxWidth: number, quality: number): Promise<Blob> {
@@ -143,10 +175,32 @@ function ScanTab() {
   async function save(final: DraftContact) {
     speech.stop();
     setSaving(true);
+
+    // Wait for the MediaRecorder onstop handler to finalize the blob.
+    let audioPath = '';
+    const blob = await new Promise<Blob | null>(resolve => {
+      if (speech.audioBlob) return resolve(speech.audioBlob);
+      let tries = 0;
+      const t = setInterval(() => {
+        tries++;
+        if (speech.audioBlob) { clearInterval(t); resolve(speech.audioBlob); }
+        else if (tries > 20) { clearInterval(t); resolve(null); }
+      }, 100);
+    });
+    if (blob && blob.size > 0) {
+      try {
+        const fd = new FormData();
+        fd.append('audio', blob, 'note.webm');
+        const ar = await fetch('/api/audio', { method: 'POST', body: fd });
+        const ad = await ar.json();
+        if (ar.ok) audioPath = ad.audio_path;
+      } catch {}
+    }
+
     const r = await fetch('/api/contacts', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ...final, photo_path: photoPath }),
+      body: JSON.stringify({ ...final, photo_path: photoPath, audio_path: audioPath }),
     });
     setSaving(false);
     if (!r.ok) { const d = await r.json(); setStatus(d.error || 'save failed'); setStatusErr(true); return; }

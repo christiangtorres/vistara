@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
     company_guess: body.company_guess || '',
     notes: body.notes || '',
     photo_path: body.photo_path || '',
+    audio_path: body.audio_path || '',
     owner: getOwner(),
   };
   const sb = supabaseAdmin();
