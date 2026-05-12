@@ -10,9 +10,7 @@ const PROMPT = `You are reading a conference attendee badge from a photo. Extrac
 {
   "name": string,
   "company": string,
-  "title": string,
   "email": string,
-  "phone": string,
   "company_guess": string
 }
 Use empty strings for fields you can't read. company_guess is a 1-2 sentence guess at what the company does, based on the company name. Do not invent contact info — only company_guess may be inferred.`;
@@ -35,9 +33,10 @@ export async function POST(req: NextRequest) {
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
   let extracted: Record<string, string> = {};
+  let rawText = '';
   try {
     const msg = await anthropic.messages.create({
-      model: 'claude-opus-4-7',
+      model: 'claude-sonnet-4-5',
       max_tokens: 600,
       messages: [{
         role: 'user',
@@ -48,11 +47,16 @@ export async function POST(req: NextRequest) {
       }],
     });
     const block = msg.content.find(b => b.type === 'text') as { type: 'text'; text: string } | undefined;
-    let text = (block?.text || '').trim();
-    if (text.startsWith('```')) text = text.replace(/^```(json)?|```$/gm, '').trim();
+    rawText = (block?.text || '').trim();
+    // Strip code fences, then find the first {...} block in case there's prose around it
+    let text = rawText.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim();
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start !== -1 && end !== -1) text = text.slice(start, end + 1);
     extracted = JSON.parse(text);
   } catch (e: any) {
-    return NextResponse.json({ photo_path: path, extracted: { error: e.message } });
+    console.error('scan extract failed', e, 'raw:', rawText);
+    return NextResponse.json({ photo_path: path, extracted: { error: e.message, raw: rawText.slice(0, 500) } });
   }
 
   return NextResponse.json({ photo_path: path, extracted });

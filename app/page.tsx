@@ -2,8 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-type Extracted = { name?: string; company?: string; title?: string; email?: string; phone?: string; company_guess?: string; error?: string };
-type Contact = { id: number; created_at: string; name: string; company: string; title: string; email: string; phone: string; company_guess: string; notes: string; owner: string };
+type Extracted = { name?: string; company?: string; email?: string; company_guess?: string; error?: string };
+type Contact = { id: number; created_at: string; name: string; company: string; email: string; company_guess: string; notes: string; owner: string };
 
 export default function Home() {
   const [tab, setTab] = useState<'scan' | 'list'>('scan');
@@ -62,10 +62,10 @@ function ScanTab() {
       if (x.error) { setStatus('AI extract failed: ' + x.error + '. Fill in manually.'); setStatusErr(true); }
       else setStatus('Got it. Review and add your notes.');
       setPhotoPath(data.photo_path);
-      setForm({ name: x.name || '', company: x.company || '', title: x.title || '', email: x.email || '', phone: x.phone || '', company_guess: x.company_guess || '', notes: '' });
+      setForm({ name: x.name || '', company: x.company || '', email: x.email || '', company_guess: x.company_guess || '', notes: '' });
     } catch (err: any) {
       setStatus(err.message); setStatusErr(true);
-      setForm({ name: '', company: '', title: '', email: '', phone: '', company_guess: '', notes: '' });
+      setForm({ name: '', company: '', email: '', company_guess: '', notes: '' });
     }
   }
 
@@ -100,9 +100,7 @@ function ScanTab() {
         <form onSubmit={save}>
           <label>Name<input value={form.name} onChange={upd('name')} /></label>
           <label>Company<input value={form.company} onChange={upd('company')} /></label>
-          <label>Title<input value={form.title} onChange={upd('title')} /></label>
           <label>Email<input type="email" value={form.email} onChange={upd('email')} /></label>
-          <label>Phone<input value={form.phone} onChange={upd('phone')} /></label>
           <label>What this company does (AI guess — edit as needed)
             <textarea rows={3} value={form.company_guess} onChange={upd('company_guess')} />
           </label>
@@ -142,8 +140,8 @@ function ListTab() {
           <div key={r.id} className="contact">
             <button className="delete" onClick={() => del(r.id)}>Delete</button>
             <h3>{r.name || '(no name)'}</h3>
-            <div className="company">{r.company}{r.title ? ' · ' + r.title : ''}</div>
-            <div className="meta">{r.email}{r.phone ? ' · ' + r.phone : ''} · added by {r.owner} on {r.created_at.slice(0, 10)}</div>
+            <div className="company">{r.company}</div>
+            <div className="meta">{r.email} · added by {r.owner} on {r.created_at.slice(0, 10)}</div>
             {r.company_guess && <div className="notes"><em>{r.company_guess}</em></div>}
             {r.notes && <div className="notes" style={{ marginTop: 8 }}>{r.notes}</div>}
           </div>
