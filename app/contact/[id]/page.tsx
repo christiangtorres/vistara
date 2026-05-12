@@ -31,7 +31,6 @@ export default async function ContactPage({ params }: { params: { id: string } }
           <Field label="Email" value={c.email} />
           <Field label="What this company does" value={c.company_guess} />
           <Field label="Your notes" value={c.notes} multi />
-          <Field label="Added by" value={`${c.owner} on ${c.created_at.slice(0, 10)}`} />
         </div>
       </div>
     </>
