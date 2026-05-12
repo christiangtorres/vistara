@@ -14,7 +14,11 @@ const PROMPT_BADGE = `You are reading a conference attendee badge from a photo. 
   "role": string,
   "company_guess": string
 }
-Use empty strings for fields you can't read. role is the badge category/type printed on the badge — e.g. "Attendee", "Sponsor", "Speaker", "Exhibitor", "Staff", "Press", "VIP". Copy it exactly as shown on the badge. company_guess is a 1-2 sentence guess at what the company does, based on the company name. Do not invent contact info — only company_guess may be inferred.`;
+Use empty strings for fields you cannot read or guess.
+- role: the badge category/type printed on the badge — e.g. "Attendee", "Sponsor", "Speaker", "Exhibitor", "Staff", "Press", "VIP". Copy exactly as shown.
+- email: if an email is printed on the badge, use it exactly. Otherwise, guess the most likely email using the person's name and the most plausible company domain. Use the lowercase pattern "firstname.lastname@<domain>". Pick the domain from the company name (e.g. "Acme Robotics" → acmerobotics.com). If you cannot reasonably guess a domain, return an empty string.
+- company_guess: 1-2 sentence guess at what the company does, based on the company name.
+Do not invent the name or company. Only email and company_guess may be inferred.`;
 
 const PROMPT_CARD = `You are reading a business card from a photo. Extract these fields and return ONLY valid JSON (no prose, no markdown fences):
 {
@@ -23,7 +27,10 @@ const PROMPT_CARD = `You are reading a business card from a photo. Extract these
   "email": string,
   "company_guess": string
 }
-Use empty strings for fields you can't read. The card may include a title, phone, address — ignore those. If there's a website on the card, use the domain (and any tagline) to inform your company_guess. company_guess is a 1-2 sentence guess at what the company does, based on the company name, any tagline, and the website domain. Do not invent contact info — only company_guess may be inferred.`;
+Use empty strings for fields you cannot read or guess. The card may include a title, phone, address — ignore those.
+- email: if an email is printed on the card, use it exactly. Otherwise, guess the most likely email using the person's name and the domain from any website on the card (or derived from the company name). Use the lowercase pattern "firstname.lastname@<domain>". If you cannot reasonably guess a domain, return an empty string.
+- company_guess: 1-2 sentence guess at what the company does, based on the company name, any tagline, and the website domain.
+Do not invent the name or company. Only email and company_guess may be inferred.`;
 
 export async function POST(req: NextRequest) {
   if (!isAuthed()) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
