@@ -158,15 +158,14 @@ function ListTab() {
       {rows.length === 0 ? <p style={{ color: '#9aa0ad' }}>No contacts yet.</p> :
         rows.map(r => (
           <div key={r.id} className="contact">
-            <button className="delete" onClick={() => del(r.id)}>Delete</button>
-            <h3>{r.name || '(no name)'}</h3>
-            <div className="company">{r.company}</div>
-            <div className="meta">
-              {r.email} · added by {r.owner} on {r.created_at.slice(0, 10)}
-              {r.photo_path && <> · <a href={`/api/photo/${r.id}`} target="_blank" rel="noreferrer">View badge</a></>}
-            </div>
-            {r.company_guess && <div className="notes"><em>{r.company_guess}</em></div>}
-            {r.notes && <div className="notes" style={{ marginTop: 8 }}>{r.notes}</div>}
+            <button className="delete" onClick={e => { e.preventDefault(); del(r.id); }}>Delete</button>
+            <a href={`/contact/${r.id}`} style={{ color: 'inherit', textDecoration: 'none', display: 'block' }}>
+              <h3>{r.name || '(no name)'}</h3>
+              <div className="company">{r.company}</div>
+              <div className="meta">{r.email} · added by {r.owner} on {r.created_at.slice(0, 10)}</div>
+              {r.company_guess && <div className="notes"><em>{r.company_guess}</em></div>}
+              {r.notes && <div className="notes" style={{ marginTop: 8 }}>{r.notes}</div>}
+            </a>
           </div>
         ))
       }
