@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 type Extracted = { name?: string; company?: string; email?: string; company_guess?: string; error?: string };
-type Contact = { id: number; created_at: string; name: string; company: string; email: string; company_guess: string; notes: string; owner: string };
+type Contact = { id: number; created_at: string; name: string; company: string; email: string; company_guess: string; notes: string; owner: string; photo_path: string };
 
 export default function Home() {
   const [tab, setTab] = useState<'scan' | 'list'>('scan');
@@ -141,7 +141,10 @@ function ListTab() {
             <button className="delete" onClick={() => del(r.id)}>Delete</button>
             <h3>{r.name || '(no name)'}</h3>
             <div className="company">{r.company}</div>
-            <div className="meta">{r.email} · added by {r.owner} on {r.created_at.slice(0, 10)}</div>
+            <div className="meta">
+              {r.email} · added by {r.owner} on {r.created_at.slice(0, 10)}
+              {r.photo_path && <> · <a href={`/api/photo/${r.id}`} target="_blank" rel="noreferrer">View badge</a></>}
+            </div>
             {r.company_guess && <div className="notes"><em>{r.company_guess}</em></div>}
             {r.notes && <div className="notes" style={{ marginTop: 8 }}>{r.notes}</div>}
           </div>
