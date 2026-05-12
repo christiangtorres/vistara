@@ -1,35 +1,53 @@
 # Vistara — Conference Badge Scanner
 
-## Deploy to Bluehost (bluehostaitesting.com/vistara)
+Next.js 14 + Supabase + Anthropic Claude vision, deployed on Vercel.
 
-1. Upload all files in this folder to `public_html/vistara/` via cPanel File Manager or FTP.
-2. In cPanel → Files → File Manager, create folder `vistara/data/` and set permissions to `755` (PHP needs to write the SQLite db + uploaded photos there).
-3. Set your Claude API key. Easiest: edit `config.php` and paste your key into `ANTHROPIC_API_KEY`. (Better: set `ANTHROPIC_API_KEY` env var in cPanel.)
-4. Visit `https://bluehostaitesting.com/vistara/` → log in.
+## Stack
 
-## Credentials
+- **Frontend / API**: Next.js 14 (App Router), TypeScript
+- **DB**: Supabase Postgres (`contacts` table)
+- **Storage**: Supabase Storage (private `badges` bucket)
+- **AI**: Anthropic Claude (Opus 4.7) for badge OCR + company-guess
+- **Auth**: shared-password cookie gate via `middleware.ts`
 
-- **Password:** `vistara2026`
-- Each user types their own name on login so the contact records show who scanned what.
+## One-time setup
 
-Change the password by editing `APP_PASSWORD` in `config.php`.
+### 1. Supabase
+- Create a Supabase project.
+- SQL Editor → paste & run [`supabase_migration.sql`](./supabase_migration.sql).
+- Project Settings → API → copy the **Project URL**, **anon public key**, and **service_role key**.
 
-## How it works
+### 2. Vercel
+- Import this GitHub repo in Vercel.
+- Project Settings → Environment Variables:
+  - `APP_PASSWORD` = `vistara2026` (or whatever you pick — shared between you and your coworker)
+  - `ANTHROPIC_API_KEY` = your Anthropic key
+  - `NEXT_PUBLIC_SUPABASE_URL` = your Supabase URL
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = anon key
+  - `SUPABASE_SERVICE_ROLE_KEY` = service-role key (server only)
+- Deploy.
 
-- Tap **Take badge photo** → phone camera opens.
-- Photo uploads → Claude vision reads the badge (name, company, title, email, phone) and writes a 1–2 sentence guess at what the company does.
-- You review/edit the fields, add your own notes, hit **Save**.
-- **Contacts** tab lists everything. Export to CSV anytime.
+### 3. Domain
+Point `bluehostaitesting.com/vistara` at the Vercel project (or just use the Vercel-assigned `*.vercel.app` URL).
+
+## Local dev
+
+```
+npm install
+cp .env.example .env.local   # fill in real values
+npm run dev
+```
+
+## Usage
+
+- Visit the site, log in with your name + shared password.
+- **Scan** tab → take a photo of the badge. Claude reads it, fills the form, and adds a guess at what the company does.
+- Add your own notes, save.
+- **Contacts** tab lists everyone you've scanned, with CSV export.
 
 ## Files
 
-- `index.php` — main app (scan + list)
-- `login.php` / `logout.php` — auth
-- `api.php` — scan / save / list / delete / export endpoints
-- `db.php` / `config.php` — SQLite + config
-- `app.js` / `style.css` — frontend
-- `data/` — SQLite db + uploaded photos (auto-created, not web-accessible)
-
-## Requirements
-
-Bluehost shared hosting with PHP 8+, PDO SQLite, and cURL — all standard.
+- `app/` — Next.js pages + API routes
+- `lib/` — Supabase client + auth helpers
+- `middleware.ts` — password gate
+- `supabase_migration.sql` — schema + storage bucket

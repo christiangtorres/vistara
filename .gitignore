@@ -1,11 +1,10 @@
-# Local config with API key — never commit
-config.local.php
-
-# Runtime data — SQLite db + uploaded badge photos
-data/
-
-# OS / editor cruft
+node_modules/
+.next/
+out/
+.env
+.env.local
+.env*.local
 .DS_Store
-*.swp
-.idea/
-.vscode/
+*.tsbuildinfo
+next-env.d.ts
+.vercel
