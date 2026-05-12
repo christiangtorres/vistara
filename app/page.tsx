@@ -62,7 +62,7 @@ function ScanTab() {
   const [step, setStep] = useState<null | 'email' | 'notes'>(null);
   const [saving, setSaving] = useState(false);
 
-  async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onPhoto(e: React.ChangeEvent<HTMLInputElement>, kind: 'badge' | 'card') {
     const file = e.target.files?.[0];
     if (!file) return;
     setPreviewUrl(URL.createObjectURL(file));
@@ -72,9 +72,10 @@ function ScanTab() {
     let upload: Blob = file;
     try { upload = await compressImage(file, 1600, 0.85); } catch {}
 
-    setStatus('Reading badge with AI…');
+    setStatus(`Reading ${kind === 'card' ? 'business card' : 'badge'} with AI…`);
     const fd = new FormData();
-    fd.append('photo', upload, 'badge.jpg');
+    fd.append('photo', upload, `${kind}.jpg`);
+    fd.append('kind', kind);
     try {
       const r = await fetch('/api/scan', { method: 'POST', body: fd });
       const data = await r.json();
@@ -106,10 +107,16 @@ function ScanTab() {
 
   return (
     <>
-      <label className="capture-btn">
-        <input type="file" accept="image/*" capture="environment" onChange={onPhoto} style={{ display: 'none' }} />
-        <span>📷 Take badge photo</span>
-      </label>
+      <div style={{ display: 'grid', gap: 10 }}>
+        <label className="capture-btn">
+          <input type="file" accept="image/*" capture="environment" onChange={e => onPhoto(e, 'badge')} style={{ display: 'none' }} />
+          <span>📷 Take badge photo</span>
+        </label>
+        <label className="capture-btn" style={{ background: '#2a3142' }}>
+          <input type="file" accept="image/*" capture="environment" onChange={e => onPhoto(e, 'card')} style={{ display: 'none' }} />
+          <span>💼 Take business card photo</span>
+        </label>
+      </div>
       {previewUrl && <img className="preview" src={previewUrl} alt="" />}
       {status && <div className={'status' + (statusErr ? ' err' : '')}>{status}</div>}
 

@@ -6,7 +6,7 @@ import { isAuthed } from '@/lib/auth';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const PROMPT = `You are reading a conference attendee badge from a photo. Extract these fields and return ONLY valid JSON (no prose, no markdown fences):
+const PROMPT_BADGE = `You are reading a conference attendee badge from a photo. Extract these fields and return ONLY valid JSON (no prose, no markdown fences):
 {
   "name": string,
   "company": string,
@@ -15,11 +15,21 @@ const PROMPT = `You are reading a conference attendee badge from a photo. Extrac
 }
 Use empty strings for fields you can't read. company_guess is a 1-2 sentence guess at what the company does, based on the company name. Do not invent contact info — only company_guess may be inferred.`;
 
+const PROMPT_CARD = `You are reading a business card from a photo. Extract these fields and return ONLY valid JSON (no prose, no markdown fences):
+{
+  "name": string,
+  "company": string,
+  "email": string,
+  "company_guess": string
+}
+Use empty strings for fields you can't read. The card may include a title, phone, website, address — ignore those. company_guess is a 1-2 sentence guess at what the company does, based on the company name and any tagline on the card. Do not invent contact info — only company_guess may be inferred.`;
+
 export async function POST(req: NextRequest) {
   if (!isAuthed()) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
   const form = await req.formData();
   const file = form.get('photo') as File | null;
+  const kind = (form.get('kind') as string) === 'card' ? 'card' : 'badge';
   if (!file) return NextResponse.json({ error: 'no photo' }, { status: 400 });
 
   const bytes = Buffer.from(await file.arrayBuffer());
@@ -42,7 +52,7 @@ export async function POST(req: NextRequest) {
         role: 'user',
         content: [
           { type: 'image', source: { type: 'base64', media_type: mime as any, data: bytes.toString('base64') } },
-          { type: 'text', text: PROMPT },
+          { type: 'text', text: kind === 'card' ? PROMPT_CARD : PROMPT_BADGE },
         ],
       }],
     });
