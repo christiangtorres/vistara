@@ -1,0 +1,8 @@
+# Block direct access to data + config
+<FilesMatch "\.(sqlite|sqlite-journal)$">
+  Require all denied
+</FilesMatch>
+<Files "config.php">
+  Require all denied
+</Files>
+RedirectMatch 403 ^/vistara/data/.*$
