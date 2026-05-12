@@ -147,7 +147,6 @@ function ScanTab() {
     setStatus('Compressing photo…'); setStatusErr(false);
     setDraft(null); setStep(null);
     speech.reset();
-    speech.start();
 
     let upload: Blob = file;
     try { upload = await compressImage(file, 1600, 0.85); } catch {}
@@ -244,15 +243,20 @@ function ScanTab() {
       )}
 
       {draft && step === 'notes' && (
-        <Modal title="Your notes" subtitle={speech.listening ? '🎤 Listening — speak your notes' : 'What do you want to remember about this person?'}>
+        <Modal title="Your notes" subtitle={speech.listening ? '🎤 Recording — speak your notes' : 'Type, or tap the mic to dictate'}>
+          <button
+            type="button"
+            onClick={() => speech.listening ? speech.stop() : speech.start()}
+            style={{
+              width: '100%', padding: 14, marginBottom: 10, borderRadius: 10, border: 0,
+              cursor: 'pointer', fontSize: 16, fontWeight: 600,
+              background: speech.listening ? '#d97777' : '#1f6feb', color: '#fff'
+            }}>
+            {speech.listening ? '⏹ Stop recording' : '🎤 Tap to record voice note'}
+          </button>
           <label>Notes
-            <textarea autoFocus rows={6} value={draft.notes} onChange={e => setDraft({ ...draft, notes: e.target.value })} placeholder="Why this is interesting, follow-up needed, where you met, etc." />
+            <textarea rows={6} value={draft.notes} onChange={e => setDraft({ ...draft, notes: e.target.value })} placeholder="Why this is interesting, follow-up needed, where you met, etc." />
           </label>
-          {speech.supported && (
-            <button type="button" className="btn-secondary" style={{ marginTop: 8 }} onClick={() => speech.listening ? speech.stop() : speech.start()}>
-              {speech.listening ? '⏹ Stop recording' : '🎤 Resume recording'}
-            </button>
-          )}
           {draft.company_guess && (
             <div style={{ color: '#9aa0ad', fontSize: 12, fontStyle: 'italic', margin: '6px 0 0' }}>
               AI guess about the company: {draft.company_guess}
