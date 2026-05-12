@@ -90,8 +90,8 @@ async function compressImage(file: File, maxWidth: number, quality: number): Pro
   );
 }
 
-type Extracted = { name?: string; company?: string; email?: string; state?: string; company_guess?: string; error?: string };
-type Contact = { id: number; created_at: string; name: string; company: string; email: string; state: string; company_guess: string; notes: string; owner: string; photo_path: string };
+type Extracted = { name?: string; company?: string; email?: string; state?: string; role?: string; company_guess?: string; error?: string };
+type Contact = { id: number; created_at: string; name: string; company: string; email: string; state: string; role: string; company_guess: string; notes: string; owner: string; photo_path: string };
 
 export default function Home() {
   const [tab, setTab] = useState<'scan' | 'list' | 'trash'>('scan');
@@ -128,7 +128,7 @@ export default function Home() {
   );
 }
 
-type DraftContact = Extracted & { notes: string; state: string };
+type DraftContact = Extracted & { notes: string; state: string; role: string };
 
 function ScanTab() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -162,7 +162,7 @@ function ScanTab() {
       if (!r.ok) throw new Error(data.error || 'scan failed');
       const x: Extracted = data.extracted || {};
       setPhotoPath(data.photo_path);
-      const d: DraftContact = { name: x.name || '', company: x.company || '', email: x.email || '', state: '', company_guess: x.company_guess || '', notes: '' };
+      const d: DraftContact = { name: x.name || '', company: x.company || '', email: x.email || '', state: '', role: x.role || '', company_guess: x.company_guess || '', notes: '' };
       setDraft(d);
       if (x.error) { setStatus('AI extract failed — enter details manually.'); setStatusErr(true); }
       else setStatus(`${x.name || ''}${x.company ? ' · ' + x.company : ''}`.trim() || 'Badge scanned.');
@@ -334,7 +334,10 @@ function ListTab() {
           <div key={r.id} className="contact">
             <button className="delete" onClick={e => { e.preventDefault(); del(r.id); }}>Delete</button>
             <a href={`/contact/${r.id}`} style={{ color: 'inherit', textDecoration: 'none', display: 'block' }}>
-              <h3>{r.name || '(no name)'}</h3>
+              <h3>
+                {r.name || '(no name)'}
+                {r.role && <span style={{ marginLeft: 8, fontSize: 11, padding: '2px 8px', background: '#2a3142', color: '#9aa0ad', borderRadius: 10, verticalAlign: 'middle', textTransform: 'uppercase', letterSpacing: 0.5 }}>{r.role}</span>}
+              </h3>
               <div className="company">{r.company}</div>
               <div className="meta">{r.email}</div>
               {r.notes && <div className="notes" style={{ marginTop: 12, fontSize: 17, lineHeight: 1.45, fontWeight: 500 }}>{r.notes}</div>}

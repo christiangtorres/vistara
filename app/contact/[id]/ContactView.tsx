@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 type Contact = {
   id: number; created_at: string;
-  name: string; company: string; email: string; state: string;
+  name: string; company: string; email: string; state: string; role: string;
   company_guess: string; notes: string; owner: string; photo_path: string;
 };
 
@@ -54,6 +54,7 @@ export default function ContactView({ contact, photoUrl, audioUrl }: { contact: 
         )}
         <div className="contact" style={{ marginBottom: 14 }}>
           <Field label="Email" value={form.email} />
+          <Field label="Badge type" value={form.role} />
           <Field label="State" value={form.state} />
           <Field label="What this company does" value={form.company_guess} />
           <Field label="Your notes" value={form.notes} multi />
@@ -73,6 +74,7 @@ export default function ContactView({ contact, photoUrl, audioUrl }: { contact: 
       <label>Name<input value={form.name} onChange={upd('name')} /></label>
       <label>Company<input value={form.company} onChange={upd('company')} /></label>
       <label>Email<input type="email" value={form.email} onChange={upd('email')} /></label>
+      <label>Badge type<input value={form.role} onChange={upd('role')} placeholder="Attendee / Sponsor / Speaker / etc." /></label>
       <label>State<input value={form.state} onChange={upd('state')} /></label>
       <label>What this company does<textarea rows={3} value={form.company_guess} onChange={upd('company_guess')} /></label>
       <label>Your notes<textarea rows={6} value={form.notes} onChange={upd('notes')} /></label>

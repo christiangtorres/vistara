@@ -11,9 +11,10 @@ const PROMPT_BADGE = `You are reading a conference attendee badge from a photo. 
   "name": string,
   "company": string,
   "email": string,
+  "role": string,
   "company_guess": string
 }
-Use empty strings for fields you can't read. company_guess is a 1-2 sentence guess at what the company does, based on the company name. Do not invent contact info — only company_guess may be inferred.`;
+Use empty strings for fields you can't read. role is the badge category/type printed on the badge — e.g. "Attendee", "Sponsor", "Speaker", "Exhibitor", "Staff", "Press", "VIP". Copy it exactly as shown on the badge. company_guess is a 1-2 sentence guess at what the company does, based on the company name. Do not invent contact info — only company_guess may be inferred.`;
 
 const PROMPT_CARD = `You are reading a business card from a photo. Extract these fields and return ONLY valid JSON (no prose, no markdown fences):
 {
