@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 export async function GET() {
   if (!isAuthed()) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const sb = supabaseAdmin();
-  const { data, error } = await sb.from('contacts').select('*').order('id', { ascending: false });
+  const { data, error } = await sb.from('contacts').select('*').is('deleted_at', null).order('id', { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }

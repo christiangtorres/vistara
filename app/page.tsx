@@ -20,7 +20,7 @@ type Extracted = { name?: string; company?: string; email?: string; state?: stri
 type Contact = { id: number; created_at: string; name: string; company: string; email: string; state: string; company_guess: string; notes: string; owner: string; photo_path: string };
 
 export default function Home() {
-  const [tab, setTab] = useState<'scan' | 'list'>('scan');
+  const [tab, setTab] = useState<'scan' | 'list' | 'trash'>('scan');
   const [owner, setOwner] = useState('');
   const router = useRouter();
 
@@ -43,9 +43,12 @@ export default function Home() {
       <nav className="tabs">
         <button className={'tab' + (tab === 'scan' ? ' active' : '')} onClick={() => setTab('scan')}>Scan</button>
         <button className={'tab' + (tab === 'list' ? ' active' : '')} onClick={() => setTab('list')}>Contacts</button>
+        <button className={'tab' + (tab === 'trash' ? ' active' : '')} onClick={() => setTab('trash')}>Trash</button>
       </nav>
       <div className="pane">
-        {tab === 'scan' ? <ScanTab /> : <ListTab />}
+        {tab === 'scan' && <ScanTab />}
+        {tab === 'list' && <ListTab />}
+        {tab === 'trash' && <TrashTab />}
       </div>
     </>
   );
@@ -148,6 +151,34 @@ function ScanTab() {
           </div>
         </Modal>
       )}
+    </>
+  );
+}
+
+function TrashTab() {
+  const [rows, setRows] = useState<Contact[] | null>(null);
+  async function load() { const r = await fetch('/api/trash'); setRows(await r.json()); }
+  useEffect(() => { load(); }, []);
+  async function restore(id: number) { await fetch(`/api/contacts/${id}/restore`, { method: 'POST' }); load(); }
+
+  if (!rows) return <p style={{ color: '#9aa0ad' }}>Loading…</p>;
+  return (
+    <>
+      <p style={{ color: '#9aa0ad', fontSize: 13, marginTop: 0 }}>Deleted contacts are kept for 7 days, then removed permanently.</p>
+      {rows.length === 0 ? <p style={{ color: '#9aa0ad' }}>Trash is empty.</p> :
+        rows.map(r => {
+          const deletedAt = (r as any).deleted_at as string;
+          const daysLeft = Math.max(0, 7 - Math.floor((Date.now() - new Date(deletedAt).getTime()) / 86400000));
+          return (
+            <div key={r.id} className="contact">
+              <h3>{r.name || '(no name)'}</h3>
+              <div className="company">{r.company}</div>
+              <div className="meta">{r.email} · deleted {deletedAt.slice(0, 10)} · {daysLeft} day{daysLeft === 1 ? '' : 's'} left</div>
+              <button className="btn-secondary" style={{ marginTop: 10 }} onClick={() => restore(r.id)}>Restore</button>
+            </div>
+          );
+        })
+      }
     </>
   );
 }

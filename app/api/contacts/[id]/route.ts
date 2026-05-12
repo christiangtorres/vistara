@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   if (!isAuthed()) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const sb = supabaseAdmin();
-  const { error } = await sb.from('contacts').delete().eq('id', Number(params.id));
+  const { error } = await sb.from('contacts').update({ deleted_at: new Date().toISOString() }).eq('id', Number(params.id));
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

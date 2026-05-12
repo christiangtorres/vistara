@@ -12,7 +12,7 @@ function csvCell(v: any) {
 export async function GET() {
   if (!isAuthed()) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const sb = supabaseAdmin();
-  const { data, error } = await sb.from('contacts').select('*').order('id');
+  const { data, error } = await sb.from('contacts').select('*').is('deleted_at', null).order('id');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const cols = ['id','created_at','name','company','email','state','company_guess','notes','owner'];
   const lines = [cols.join(',')];
