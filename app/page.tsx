@@ -16,8 +16,8 @@ async function compressImage(file: File, maxWidth: number, quality: number): Pro
   );
 }
 
-type Extracted = { name?: string; company?: string; email?: string; company_guess?: string; error?: string };
-type Contact = { id: number; created_at: string; name: string; company: string; email: string; company_guess: string; notes: string; owner: string; photo_path: string };
+type Extracted = { name?: string; company?: string; email?: string; state?: string; company_guess?: string; error?: string };
+type Contact = { id: number; created_at: string; name: string; company: string; email: string; state: string; company_guess: string; notes: string; owner: string; photo_path: string };
 
 export default function Home() {
   const [tab, setTab] = useState<'scan' | 'list'>('scan');
@@ -82,10 +82,10 @@ function ScanTab() {
       if (x.error) { setStatus('AI extract failed: ' + x.error + '. Fill in manually.'); setStatusErr(true); }
       else setStatus('Got it. Review and add your notes.');
       setPhotoPath(data.photo_path);
-      setForm({ name: x.name || '', company: x.company || '', email: x.email || '', company_guess: x.company_guess || '', notes: '' });
+      setForm({ name: x.name || '', company: x.company || '', email: x.email || '', state: x.state || '', company_guess: x.company_guess || '', notes: '' });
     } catch (err: any) {
       setStatus(err.message); setStatusErr(true);
-      setForm({ name: '', company: '', email: '', company_guess: '', notes: '' });
+      setForm({ name: '', company: '', email: '', state: '', company_guess: '', notes: '' });
     }
   }
 
@@ -121,6 +121,7 @@ function ScanTab() {
           <label>Name<input value={form.name} onChange={upd('name')} /></label>
           <label>Company<input value={form.company} onChange={upd('company')} /></label>
           <label>Email<input type="email" value={form.email} onChange={upd('email')} /></label>
+          <label>State (optional)<input value={form.state} onChange={upd('state')} /></label>
           <label>What this company does (AI guess — edit as needed)
             <textarea rows={3} value={form.company_guess} onChange={upd('company_guess')} />
           </label>

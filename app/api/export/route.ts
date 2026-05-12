@@ -14,7 +14,7 @@ export async function GET() {
   const sb = supabaseAdmin();
   const { data, error } = await sb.from('contacts').select('*').order('id');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  const cols = ['id','created_at','name','company','title','email','phone','company_guess','notes','owner'];
+  const cols = ['id','created_at','name','company','email','state','company_guess','notes','owner'];
   const lines = [cols.join(',')];
   for (const r of data || []) lines.push(cols.map(c => csvCell((r as any)[c])).join(','));
   return new NextResponse(lines.join('\n'), {

@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
     company: body.company || '',
     title: body.title || '',
     email: body.email || '',
+    state: body.state || '',
     phone: body.phone || '',
     company_guess: body.company_guess || '',
     notes: body.notes || '',

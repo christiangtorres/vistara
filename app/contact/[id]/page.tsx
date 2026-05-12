@@ -29,6 +29,7 @@ export default async function ContactPage({ params }: { params: { id: string } }
 
         <div className="contact" style={{ marginBottom: 14 }}>
           <Field label="Email" value={c.email} />
+          <Field label="State" value={c.state} />
           <Field label="What this company does" value={c.company_guess} />
           <Field label="Your notes" value={c.notes} multi />
         </div>
