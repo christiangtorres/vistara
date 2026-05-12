@@ -22,7 +22,7 @@ const PROMPT_CARD = `You are reading a business card from a photo. Extract these
   "email": string,
   "company_guess": string
 }
-Use empty strings for fields you can't read. The card may include a title, phone, website, address — ignore those. company_guess is a 1-2 sentence guess at what the company does, based on the company name and any tagline on the card. Do not invent contact info — only company_guess may be inferred.`;
+Use empty strings for fields you can't read. The card may include a title, phone, address — ignore those. If there's a website on the card, use the domain (and any tagline) to inform your company_guess. company_guess is a 1-2 sentence guess at what the company does, based on the company name, any tagline, and the website domain. Do not invent contact info — only company_guess may be inferred.`;
 
 export async function POST(req: NextRequest) {
   if (!isAuthed()) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
