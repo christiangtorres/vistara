@@ -1,6 +1,48 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+
+function useSpeech() {
+  const [transcript, setTranscript] = useState('');
+  const [listening, setListening] = useState(false);
+  const [supported, setSupported] = useState(true);
+  const recRef = useRef<any>(null);
+  const finalRef = useRef('');
+
+  useEffect(() => {
+    const SR = (typeof window !== 'undefined') && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+    if (!SR) setSupported(false);
+  }, []);
+
+  function start() {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { setSupported(false); return false; }
+    try {
+      const rec = new SR();
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.lang = 'en-US';
+      rec.onresult = (e: any) => {
+        let interim = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const t = e.results[i][0].transcript;
+          if (e.results[i].isFinal) finalRef.current += t + ' ';
+          else interim += t;
+        }
+        setTranscript((finalRef.current + interim).trim());
+      };
+      rec.onend = () => setListening(false);
+      rec.onerror = () => setListening(false);
+      rec.start();
+      recRef.current = rec;
+      setListening(true);
+      return true;
+    } catch { setListening(false); return false; }
+  }
+  function stop() { try { recRef.current?.stop(); } catch {} setListening(false); }
+  function reset() { finalRef.current = ''; setTranscript(''); }
+  return { transcript, listening, supported, start, stop, reset };
+}
 
 async function compressImage(file: File, maxWidth: number, quality: number): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
@@ -64,6 +106,7 @@ function ScanTab() {
   const [draft, setDraft] = useState<DraftContact | null>(null);
   const [step, setStep] = useState<null | 'email' | 'notes'>(null);
   const [saving, setSaving] = useState(false);
+  const speech = useSpeech();
 
   async function onPhoto(e: React.ChangeEvent<HTMLInputElement>, kind: 'badge' | 'card') {
     const file = e.target.files?.[0];
@@ -71,6 +114,8 @@ function ScanTab() {
     setPreviewUrl(URL.createObjectURL(file));
     setStatus('Compressing photo…'); setStatusErr(false);
     setDraft(null); setStep(null);
+    speech.reset();
+    speech.start();
 
     let upload: Blob = file;
     try { upload = await compressImage(file, 1600, 0.85); } catch {}
@@ -96,6 +141,7 @@ function ScanTab() {
   }
 
   async function save(final: DraftContact) {
+    speech.stop();
     setSaving(true);
     const r = await fetch('/api/contacts', {
       method: 'POST',
@@ -106,7 +152,15 @@ function ScanTab() {
     if (!r.ok) { const d = await r.json(); setStatus(d.error || 'save failed'); setStatusErr(true); return; }
     setStatus('Saved ✓'); setStatusErr(false);
     setDraft(null); setPreviewUrl(null); setPhotoPath(''); setStep(null);
+    speech.reset();
   }
+
+  // Keep notes field synced with live voice transcript while listening.
+  useEffect(() => {
+    if (speech.listening && draft && step === 'notes') {
+      setDraft(d => d ? { ...d, notes: speech.transcript } : d);
+    }
+  }, [speech.transcript, speech.listening, step]);
 
   return (
     <>
@@ -136,10 +190,15 @@ function ScanTab() {
       )}
 
       {draft && step === 'notes' && (
-        <Modal title="Your notes" subtitle="What do you want to remember about this person?">
+        <Modal title="Your notes" subtitle={speech.listening ? '🎤 Listening — speak your notes' : 'What do you want to remember about this person?'}>
           <label>Notes
             <textarea autoFocus rows={6} value={draft.notes} onChange={e => setDraft({ ...draft, notes: e.target.value })} placeholder="Why this is interesting, follow-up needed, where you met, etc." />
           </label>
+          {speech.supported && (
+            <button type="button" className="btn-secondary" style={{ marginTop: 8 }} onClick={() => speech.listening ? speech.stop() : speech.start()}>
+              {speech.listening ? '⏹ Stop recording' : '🎤 Resume recording'}
+            </button>
+          )}
           {draft.company_guess && (
             <div style={{ color: '#9aa0ad', fontSize: 12, fontStyle: 'italic', margin: '6px 0 0' }}>
               AI guess about the company: {draft.company_guess}
