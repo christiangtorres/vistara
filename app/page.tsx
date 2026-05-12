@@ -163,8 +163,8 @@ function ListTab() {
               <h3>{r.name || '(no name)'}</h3>
               <div className="company">{r.company}</div>
               <div className="meta">{r.email} · added by {r.owner} on {r.created_at.slice(0, 10)}</div>
-              {r.notes && <div className="notes" style={{ marginTop: 10, fontSize: 15, lineHeight: 1.45 }}>{r.notes}</div>}
-              {r.company_guess && <div style={{ marginTop: 8, color: '#9aa0ad', fontSize: 13, fontStyle: 'italic' }}>{r.company_guess}</div>}
+              {r.notes && <div className="notes" style={{ marginTop: 12, fontSize: 17, lineHeight: 1.45, fontWeight: 500 }}>{r.notes}</div>}
+              {r.company_guess && <div style={{ marginTop: 10, color: '#9aa0ad', fontSize: 12, fontStyle: 'italic' }}>{r.company_guess}</div>}
             </a>
           </div>
         ))
