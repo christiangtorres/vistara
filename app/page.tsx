@@ -136,7 +136,7 @@ function ScanTab() {
   const [statusErr, setStatusErr] = useState(false);
   const [photoPath, setPhotoPath] = useState('');
   const [draft, setDraft] = useState<DraftContact | null>(null);
-  const [step, setStep] = useState<null | 'email' | 'notes'>(null);
+  const [step, setStep] = useState<null | 'email' | 'notes' | 'manual'>(null);
   const [saving, setSaving] = useState(false);
   const speech = useSpeech();
 
@@ -210,7 +210,7 @@ function ScanTab() {
 
   // Keep notes field synced with live voice transcript while listening.
   useEffect(() => {
-    if (speech.listening && draft && step === 'notes') {
+    if (speech.listening && draft && (step === 'notes' || step === 'manual')) {
       setDraft(d => d ? { ...d, notes: speech.transcript } : d);
     }
   }, [speech.transcript, speech.listening, step]);
@@ -226,9 +226,47 @@ function ScanTab() {
           <input type="file" accept="image/*" capture="environment" onChange={e => onPhoto(e, 'card')} style={{ display: 'none' }} />
           <span>💼 Take business card photo</span>
         </label>
+        <button
+          type="button"
+          className="capture-btn"
+          style={{ background: 'transparent', border: '1px solid #2a3142', color: '#e8eaed' }}
+          onClick={() => {
+            setPreviewUrl(null); setPhotoPath(''); setStatus(''); setStatusErr(false);
+            speech.reset();
+            setDraft({ name: '', company: '', email: '', state: '', role: '', company_guess: '', notes: '' });
+            setStep('manual');
+          }}
+        >
+          ✍️ Add contact manually
+        </button>
       </div>
       {previewUrl && <img className="preview" src={previewUrl} alt="" />}
       {status && <div className={'status' + (statusErr ? ' err' : '')}>{status}</div>}
+
+      {draft && step === 'manual' && (
+        <Modal title="Add contact" subtitle="No badge or card — enter the details">
+          <label>Name<input autoFocus value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} /></label>
+          <label>Company<input value={draft.company} onChange={e => setDraft({ ...draft, company: e.target.value })} /></label>
+          <label>Email<input type="email" value={draft.email} onChange={e => setDraft({ ...draft, email: e.target.value })} placeholder="name@company.com" /></label>
+          <label>Badge type<input value={draft.role} onChange={e => setDraft({ ...draft, role: e.target.value })} placeholder="Attendee / Sponsor / etc." /></label>
+          <label>State (optional)<input value={draft.state} onChange={e => setDraft({ ...draft, state: e.target.value })} placeholder="e.g. CA" /></label>
+          <button
+            type="button"
+            onClick={() => speech.listening ? speech.stop() : speech.start()}
+            style={{
+              width: '100%', padding: 12, marginTop: 12, marginBottom: 4, borderRadius: 10, border: 0,
+              cursor: 'pointer', fontSize: 15, fontWeight: 600,
+              background: speech.listening ? '#d97777' : '#1f6feb', color: '#fff'
+            }}>
+            {speech.listening ? '⏹ Stop recording' : '🎤 Tap to record voice note'}
+          </button>
+          <label>Notes<textarea rows={5} value={draft.notes} onChange={e => setDraft({ ...draft, notes: e.target.value })} placeholder="Why this is interesting, follow-up needed, where you met, etc." /></label>
+          <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+            <button type="button" className="btn-secondary" onClick={() => { setDraft(null); setStep(null); speech.stop(); speech.reset(); }}>Cancel</button>
+            <button className="primary" style={{ marginTop: 0, flex: 1 }} disabled={saving} onClick={() => save(draft)}>{saving ? 'Saving…' : 'Save contact'}</button>
+          </div>
+        </Modal>
+      )}
 
       {draft && step === 'email' && (
         <Modal title="Confirm email" subtitle={draft.name ? `For ${draft.name}${draft.company ? ` · ${draft.company}` : ''}` : undefined}>
