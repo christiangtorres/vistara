@@ -2,6 +2,20 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+async function compressImage(file: File, maxWidth: number, quality: number): Promise<Blob> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, maxWidth / bitmap.width);
+  const w = Math.round(bitmap.width * scale);
+  const h = Math.round(bitmap.height * scale);
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  return await new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/jpeg', quality)
+  );
+}
+
 type Extracted = { name?: string; company?: string; email?: string; company_guess?: string; error?: string };
 type Contact = { id: number; created_at: string; name: string; company: string; email: string; company_guess: string; notes: string; owner: string; photo_path: string };
 
@@ -49,11 +63,17 @@ function ScanTab() {
     const file = e.target.files?.[0];
     if (!file) return;
     setPreviewUrl(URL.createObjectURL(file));
-    setStatus('Reading badge with AI…'); setStatusErr(false);
+    setStatus('Compressing photo…'); setStatusErr(false);
     setForm(null);
 
+    let upload: Blob = file;
+    try {
+      upload = await compressImage(file, 1600, 0.85);
+    } catch { /* fall back to original */ }
+
+    setStatus('Reading badge with AI…');
     const fd = new FormData();
-    fd.append('photo', file);
+    fd.append('photo', upload, 'badge.jpg');
     try {
       const r = await fetch('/api/scan', { method: 'POST', body: fd });
       const data = await r.json();
