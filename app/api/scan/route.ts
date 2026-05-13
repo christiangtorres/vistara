@@ -16,7 +16,7 @@ const PROMPT_BADGE = `You are reading a conference attendee badge from a photo. 
 }
 Use empty strings for fields you cannot read or guess.
 - role: the badge category/type printed on the badge — e.g. "Attendee", "Sponsor", "Speaker", "Exhibitor", "Staff", "Press", "VIP". Copy exactly as shown.
-- email: if an email is printed on the badge, use it exactly. Otherwise, guess the most likely email using the person's first name and a domain derived from THEIR EMPLOYER COMPANY (the company printed on the badge next to their name). Never use the conference name, event name, sponsor names, or any organization other than the person's own employer. Use the lowercase pattern "firstname@<domain>". Derive the domain from the employer company name (e.g. "Acme Robotics" → acmerobotics.com, "Big Sky Tech" → bigskytech.com). If you cannot identify the employer company, return an empty string.
+- email: if an email is printed on the badge, use it exactly. Otherwise, guess using the person's first name and the EMPLOYER COMPANY's real website domain. The employer company is the one printed on the badge next to their name — never use the conference, event, sponsor, or any other organization. If you do not already know the company's real website, USE THE web_search TOOL to look it up (search for the company name) and read the actual domain from the official site. Use the lowercase pattern "firstname@<domain>" (no last name). If you cannot identify the employer company at all, return an empty string.
 - company_guess: 1-2 sentence guess at what the company does, based on the company name.
 Do not invent the name or company. Only email and company_guess may be inferred.`;
 
@@ -28,7 +28,7 @@ const PROMPT_CARD = `You are reading a business card from a photo. Extract these
   "company_guess": string
 }
 Use empty strings for fields you cannot read or guess. The card may include a title, phone, address — ignore those.
-- email: if an email is printed on the card, use it exactly. Otherwise, guess the most likely email using the person's name and the domain from any website on the card (or derived from the company name). Use the lowercase pattern "firstname@<domain>" (first name only, no last name). If you cannot reasonably guess a domain, return an empty string.
+- email: if an email is printed on the card, use it exactly. Otherwise, guess using the person's first name and the company's real website domain. Use any website printed on the card if present. If no website is shown and you do not already know the company, USE THE web_search TOOL to look it up by company name and read the domain from the official site. Use the lowercase pattern "firstname@<domain>" (no last name). If you cannot identify the company, return an empty string.
 - company_guess: 1-2 sentence guess at what the company does, based on the company name, any tagline, and the website domain.
 Do not invent the name or company. Only email and company_guess may be inferred.`;
 
@@ -55,7 +55,8 @@ export async function POST(req: NextRequest) {
   try {
     const msg = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
-      max_tokens: 600,
+      max_tokens: 1500,
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2 } as any],
       messages: [{
         role: 'user',
         content: [
@@ -64,8 +65,8 @@ export async function POST(req: NextRequest) {
         ],
       }],
     });
-    const block = msg.content.find(b => b.type === 'text') as { type: 'text'; text: string } | undefined;
-    rawText = (block?.text || '').trim();
+    const textBlocks = msg.content.filter(b => b.type === 'text') as Array<{ type: 'text'; text: string }>;
+    rawText = (textBlocks[textBlocks.length - 1]?.text || '').trim();
     // Strip code fences, then find the first {...} block in case there's prose around it
     let text = rawText.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim();
     const start = text.indexOf('{');
